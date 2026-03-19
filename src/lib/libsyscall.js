@@ -560,6 +560,29 @@ var SyscallsLibrary = {
     var stream = SYSCALLS.getStreamFromFD(fd);
     return 0; // we can't do anything synchronously; the in-memory FS is already synced to
   },
+  __syscall_ppoll__deps: ['__syscall_poll'],
+  __syscall_ppoll__proxy: 'sync',
+  __syscall_ppoll__async: 'auto',
+  __syscall_ppoll: (fds, nfds, tmo_p, sigmaskp, sigsetsize) => {
+    var timeout;
+    if (tmo_p) {
+      // musl passes a long[2] (not a struct timespec): two 4-byte values
+      // at offsets 0 and 4 for tv_sec and tv_nsec respectively.
+      var tv_sec = {{{ makeGetValue('tmo_p', 0, 'i32') }}};
+      var tv_nsec = {{{ makeGetValue('tmo_p', 4, 'i32') }}};
+      timeout = tv_sec * 1000 + (tv_nsec / 1000000);
+    } else {
+      timeout = -1;
+    }
+    return ___syscall_poll(fds, nfds, timeout);
+  },
+  // NOTE: __async is intentionally NOT set here.  The compiler-generated
+  // Asyncify.handleAsync wrapper conflicts with PROXY_SYNC_ASYNC: when
+  // poll is called from the proxy path on the main thread, the Promise
+  // return triggers an ASYNCIFY unwind that destroys the proxy task
+  // execution, causing the worker to hang.  Instead, we handle ASYNCIFY
+  // manually inside the function via Asyncify.handleAsync only when NOT
+  // in a proxied context.
   __syscall_poll__proxy: 'sync',
   __syscall_poll__async: 'auto',
   __syscall_poll: (fds, nfds, timeout) => {
