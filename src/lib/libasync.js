@@ -443,10 +443,17 @@ addToLibrary({
     //
     // This is particularly useful for native JS `async` functions where the
     // returned value will "just work" and be passed back to C++.
-    handleAsync: (startAsync) => Asyncify.handleSleep(async (wakeUp) => {
-      // TODO: add error handling as a second param when handleSleep implements it.
-      wakeUp(await startAsync());
-    }),
+    handleAsync: (startAsync) => {
+#if PTHREADS
+      // When called from a proxied function (PROXY_SYNC_ASYNC), the proxy
+      // mechanism handles the async return.  Skip the Asyncify unwind.
+      if (PThread.currentProxiedOperationCallerThread) return startAsync();
+#endif
+      return Asyncify.handleSleep(async (wakeUp) => {
+        // TODO: add error handling as a second param when handleSleep implements it.
+        wakeUp(await startAsync());
+      });
+    },
 
 #elif ASYNCIFY == 2
     //
