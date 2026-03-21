@@ -9646,6 +9646,18 @@ NODEFS is no longer included by default; build with -lnodefs.js
       self.skipTest('test requires setTimeout which is not supported under v8')
     self.do_runf('core/test_poll_blocking_asyncify.c', 'done\n')
 
+  @no_esm_integration('WASM_ESM_INTEGRATION is not compatible with ASYNCIFY=1')
+  @requires_pthreads
+  def test_poll_blocking_asyncify_pthread(self):
+    # Only testing ASYNCIFY=1: JSPI's handleAsync is a plain async function
+    # and doesn't have this bug.  Also, with_asyncify_and_jspi can't be
+    # combined with requires_pthreads since require_jspi may select d8 which
+    # doesn't support pthreads (require_pthreads then hard-fails instead of
+    # skipping).
+    self.set_setting('ASYNCIFY')
+    self.do_runf('core/test_poll_blocking.c', 'done\n',
+                 cflags=['-sPROXY_TO_PTHREAD', '-sEXIT_RUNTIME'])
+
   @parameterized({
     '': ([],),
     'pthread': (['-pthread'],),
