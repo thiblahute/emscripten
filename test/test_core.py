@@ -9652,6 +9652,11 @@ NODEFS is no longer included by default; build with -lnodefs.js
       self.skipTest('test requires setTimeout which is not supported under v8')
     self.do_runf('core/test_poll_blocking_asyncify.c', 'done\n')
 
+  @with_asyncify_and_jspi
+  def test_poll_blocking_asyncify_pthread(self):
+    self.require_pthreads()
+    self.do_runf('core/test_poll_blocking.c', 'done\n', cflags=['-sPROXY_TO_PTHREAD', '-sEXIT_RUNTIME'])
+
   @parameterized({
     '': ([],),
     'pthread': (['-pthread'],),
